@@ -1,0 +1,147 @@
+==============================================================
+DEPENDENCIES:
+
+OS: Linux. Mac OS X should also work but I have not tested on it.
+
+
+1. Installing torch and basic package dependencies following instructions from 
+http://torch.ch/docs/getting-started.html
+You may need to install cmake if you do not have it already. It is highly recommended to link against OpenBLAS or other optimized BLAS library when building torch, since it makes a huge difference in performance when running on CPU.
+
+2.libhdf5 (>=1.8.14), torch package torch-hdf5
+Install libhdf5 following instructions from
+http://www.hdfgroup.org/HDF5/release/obtain5.html
+
+Then install package torch-hdf5 following instructions from
+https://github.com/deepmind/torch-hdf5/blob/master/doc/usage.md
+
+3. Bedops (>=2.4.3)
+
+4. Tabix (>=1.2.1)
+
+3. Python 2.7.x, numpy, pandas, h5py, statsmodels, joblib, biopython 
+
+We recommend the Anaconda distribution which ships with all these packages except for biopython (which can be easily installed by “conda install biopython” command after you install Anaconda).
+
+4. R (>3.0). 
+Install Bioconductor packages BSgenome.Hsapiens.UCSC.hg19, TxDb.Hsapiens.UCSC.hg19.knownGene (not necessary if filterCoding option is not used), and all dependencies of these packages.
+
+Install with R commands:
+source("http://bioconductor.org/biocLite.R")
+biocLite("BSgenome.Hsapiens.UCSC.hg19")
+biocLite("TxDb.Hsapiens.UCSC.hg19.knownGene ")
+
+5. If you want to use variant classifiers and get full output, you need to download evolutionary score files (http://deepsea.princeton.edu/media/code/evo_scores.tar.gz) and extract under ./resources/ directory. If these files are not found, variant classifier prediction scores and functional signficance scores will not be computed.
+
+==============================================================
+
+EXAMPLE USAGE:
+
+Example run :
+python rundeepsea.py ./examples/deepsea/example.vcf outdir
+
+output files will be under outdir
+
+
+Example run 'Sequence Profiler' or ‘in silico saturated mutagenesis’:
+python rundeepsea-insilicomut.py ./examples/seqprofiler/example.fasta ./outdir-mut 469
+
+output files will be under outdir. 469 indicates the index of the feature ("H1-hESC|CEBPB|None") to plot. The index to feature mapping can be found in ./resources/feature_map . 
+
+==============================================================
+
+HELP
+
+DeepSEA predicts genomic variant effects on a wide range of chromatin features at the variant position (Transcription factors binding, DNase I hypersensitive sites, and histone marks in multiple hunman cell types. See the full list here.). DeepSEA can also be ultilized for predicting chromatin features for any DNA sequence.
+
+Input:
+
+We support three types of input: vcf, fasta, bed. If you want to predict effects of noncoding variants, use vcf format input. If you want to predict chromatin feature probabilities for DNA sequences, use fasta format. If you want to specify sequences from the human reference genome (GRCh37/hg19), you can use bed format. See below for a quick introduction, and we provide detailed description of format requirement on the DeepSEA input page:
+
+Vcf format is used for specifying a genomic variant. A minimal example is chr1 109817590 - G T (if you want to copy cover this text as input, you need to change spaces to tabs since html webpage can not display tab). The five columns are chromosome, position, name, reference allele, and alternative allele.
+
+Fasta format input should include sequences of 1000bp length each. If a sequence is longer than 1000bp, only the center 1000bp will be used. A minimal example is :
+
+>TestSequence
+TATCTCTCATGTTTCTGGTATAGATGGTATATATGTTAATCTTGTTCCTGAGGTCTGTTTTTTATTTTTGTCATTAAAGT
+GGGAATTAAATAGTTTTGTAGTGCATATAAATTAAAGAAAAAGTTCACATAAGCATATTTGCCAATCATCTCAAAATGCT
+ATATTCTCCTTCACGGTTTTGAAAATAATTCAGGGTTTTCTCTTCCTCATTGCTTTCCCACCAACTGACAGTATTATTTT
+CTTAGTCATTTTACTGACCTTTGAAATTACTCCTTTGAGGTCTTCTAAAAAATTTTATGGGCTCTGCTGCTTTTTGGTGG
+CCTCCTTGTATCATTTATTCTATTACAGGACGACTTACAAAAGGAAGCACATAAATTGACCCATATACATATCCTATCAT
+TGGGGAGTTTCTGTGCAAATGTTATTTATTGGAAGCTATTACTAAGAATTGTAAGAAAAATAATTGGTATTGATGCAGCT
+AGTATGGTTCCTGTAATTATCGTACTCAGCCACGTAAATCATAGCTATATGTAGCCAAAGATCCATGAACAAAATTTCCA
+GTAACATCATTATAATTCAAAAGGCAGACTTTCAGAACCAGACAGACTTGAATTTAAATTCTAGCTTTACCACACATGAA
+TTTAACCTTGTGGAAGGTTAACCTATCTAAACTCATGTTTCTTCATTGGTAGCTGATAAAATTAAGGATCATGTATATAA
+CCACCTAGTAGAGTTGTTTAAGAAACTGTTAGAATTCCATAAATTGTTAGTATTAATGAGTTTTTGTTGGACATGTGTTA
+GGCTAGGCCACTCCTTGACCTTCATAGAGGTATGGATTATGACACAAATTCTAAACTGTAGGTAGGCATGGCTTTGTAGC
+AAGTATTAAAATAGTAAATATTTTATTTTTATAAGATAAATGTAAACCTTTTAAAAGTTTCATTACATTTGTATTTATGA
+AATATCATCCTATATCAACTATAGAGAGAAGATCGCAAGA
+
+Bed format provides another way to specify sequences in human reference genome (hg19). The bed input should specify 1000bp regions, otherwise we will choose the 1000bp regions centering on the midpoints of the regions specifed by the bed file. A minimal example is chr1 109817091 109818090. The three columns are chromosome, start position, and end position.
+
+We support only GRCh37/hg19 genome coordinates. You can use LiftOver to convert your coordinates to the correct version.
+
+Output:
+
+For sequences input in fasta/bed format, the output will be a single tab-delimited file providing 919 chromatin feature probability predictions for each of the input sequences.
+
+For variants input in vcf format, the output will include seven tab-delimited files:
+
+infile.vcf.out.ref: Chromatin feature probabilities for sequences carrying the reference allele.
+infile.vcf.out.alt: Chromatin feature probabilities for sequences carrying the alternative allele.
+infile.vcf.out.diff: Chromatin feature change p_ref - p_alt for each variant. Computed by comparing the two above files.
+infile.vcf.out.logfoldchange: Chromatin feature log fold change log(p_ref/(1-p_ref))-log(p_alt/(1-p_alt)) for each variant. Computed by comparing the two above files.
+infile.vcf.out.evalue: E-values for the chromatin feature effects.
+infile.vcf.out.funsig: Functional significance score for each variant.
+infile.vcf.out.snpclass: We predict the probability of a SNP being a eQTL or trait-associated (GWAS) SNPs. (Note that only common variants were used in training these classifiers, thus be careful on interpreting the predictions on rare variant/mutations).
+
+Note that the last two files will not be generated if the evolutionary conservation score files are not found under the ./resources directory.
+
+An example infile.vcf.out.logfoldchange output format for variant input (vcf) (other output files are similarly organized):
+
+chr	   pos				name   ref    alt 8988T|DNase|None    AoSMC|DNase|None	  ...
+chr1	   109817590			-      G      T	  3.89E-01	      2.34E+00		  ...
+chr10	   23508363			-      A      G	  1.56E-01	      8.59E-02		  ...
+chr16	   52599188			-      C      T	  -7.13E-02	      2.65E-02		  ...
+chr16	   209709			-      T      C	  7.28E-02	      3.60E-01		  ...
+
+Chromatin features such as "8988T|DNase|None" are named by Cell Type_Chromatin Feature Type_Treatment convention. The values shown in this example are log fold changes.
+
+
+
+
+
+
+Sequence Profiler
+
+
+
+Sequence Profiler performs "in silico saturated mutagenesis" analysis for discovering informative sequence features within any sequence. Specifically, it performs computational mutation scanning to assess effect of mutating every base of the input sequence on chromatin feature predictions. This method for context-specific sequence feature extraction fully utilizes the DeepSEA’s capability of utilizing flanking context sequences information.
+
+We support three types of input for specifying a sequence to analyze: vcf, fasta, bed. See the Input section for a brief introduction to the formats. Note that sequence profiler only accepts one sequence / region / variant as input. If a variant is given, we perform analysis on the sequence carrying the alternative allele (if you want to analyze the reference allele, just use bed or fasta format input instead).
+
+You also need to specify the chromatin feature that you want to analyze (e.g. CEBPB in H1-hESC cell with no treatment). If you have no idea which chromatin feature to look at, you may provide your input to DeepSEA and check which chromatin features are predicted to be on for your sequence.
+
+
+
+
+===========================================================================
+FAQ
+
+"Can DeepSEA predict effects of INDELs?" Yes. We support both single nucleotide substitution and small insertion/deletions (up to 100bp). For InDels, the reference String (forth column) must include the base before the insertion/deletion event, and the base must match the reference genome at the genomic position specified by the first and second columns. For example, 19 41304596 rs10680577 T TTACT specifies an small insertion of "TACT".
+
+"What is the E-value of a variant for a chromatin feature?" E is short for 'Expect', and E-value is defined as the expected proportion of SNPs with larger predicted effect (from reference allele to alternative allele) for this chromatin feature. The predicted effect magnitude is measured as the product of relative and absoluted change, i.e. |log(p_ref/(1-p_ref))-log(p_alt/(1-p_alt))| * |p_ref-p_alt| . E-value is computed based on the empirical distributions of predicted effects for 1000 Genomes SNPs.
+
+"What is the interpretation of the predicted probabilities for chromatin features of a sequence / genomic region?" The probability output of DeepSEA for a chromatin feature is the probability of observing a binding event (ChIP peak) at the center 200bp region of the sequence, with the assumption that the overall frequency of binding events is the same as the training data of DeepSEA. For variant input (vcf format), we compute the probabilities for both the reference allele and the alternative allele for each variant.
+
+"How accurate are DeepSEA predictions for a specific chromatin feature?" See AUCs here. AUC can be interpreted as the probability of ranking a random positive example higher than a random negative example. The median AUC for TF, DNase I hypersensitive sites, and histone marks are 0.958, 0.923, 0.856 respectively. For details of AUC calculation please refer to our manuscript.
+
+"What is functional significance score?" Functional significance score measures the signficance of predicted chromatin effect support and evolutionary support of functionality. Specifically it is computed as the product of the minimum E-value across chromatin features and the minimum E-value of the evolutionary conservation scores.
+
+"For Sequence Profiler, does no effect detected for mutating a base suggest that base is not predictive for the chromatin feature?" Be aware of the redundancy of binding sites which is quite common. If multiple redundant binding sites exist, it may buffer the effect of mutating a base on one of the site. If you suspect this is the case, try to mutate multiple copies of the sequence elements at the same time. Currently you can do this via generating sequence of your design in fasta format and analyze output of DeepSEA.
+
+
+===========================================================================
+Contact me
+
+Jian Zhou <jzhoup@gmail.com>
