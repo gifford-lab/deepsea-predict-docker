@@ -1,36 +1,28 @@
 FROM kaixhin/cuda-torch:7.0
 MAINTAINER Haoyang Zeng  <haoyangz@mit.edu>
 
-RUN apt-get update
-RUN apt-get update && apt-get install -y \
-    curl \
-	emacs24-nox \
-	gcc-4.8-plugin-dev \
-	libhdf5-dev \
-	luarocks \
-	libmatio2 \
-	nano \
-	pkg-config \
-	git \
-	python-setuptools python-dev build-essential 
-
 RUN sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list'
 RUN gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
 RUN gpg -a --export E084DAB9 | sudo apt-key add -
 RUN apt-get update
-RUN apt-get -y install r-base
+RUN apt-get update && apt-get install -y \
+    curl emacs24-nox \
+	gcc-4.8-plugin-dev libhdf5-dev \
+	luarocks libmatio2 \
+	nano pkg-config \
+	git python-setuptools \
+	python-dev build-essential \
+	tabix r-base \
+	r-base-dev r-cran-rcurl r-cran-xml
 
 RUN pip install numpy pandas h5py statsmodels joblib biopython
 
 RUN git clone https://github.com/bedops/bedops.git;cd bedops;make
 
-COPY tabix-0.2.6.tar.bz2 /root/
-RUN cd /root/; tar xvjf tabix-0.2.6.tar.bz2; cd tabix-0.2.6;make
-ENV PATH=/root/tabix-0.2.6:$PATH
-
-RUN apt-get install -y r-base-dev r-cran-rcurl r-cran-xml
-COPY rscript.R /root/
-RUN Rscript /root/rscript.R
+RUN sh -c 'echo "source(\"http://bioconductor.org/biocLite.R\") \n \
+    biocLite(\"BSgenome.Hsapiens.UCSC.hg19\") \n \
+	    biocLite(\"TxDb.Hsapiens.UCSC.hg19.knownGene\")\n" > rscript.R '
+RUN Rscript rscript.R
 
 # Get required Lua packages.
 #RUN /root/torch/install/bin/luarocks install cutorch 
