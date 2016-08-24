@@ -27,6 +27,26 @@ RUN apt-get update && apt-get install -y \
     r-cran-xml \
     tabix
 
+# Switch to a more recent OpenBLAS library that hopefully has runtime
+# detection of AVX instruction compatibility.
+#
+# Based on https://github.com/ogrisel/docker-openblas/blob/master/build_openblas.sh
+# and install_openblas() here https://github.com/torch/ezinstall/blob/master/install-deps.
+RUN apt-get purge -y \
+    liblapack3 \
+    liblapack-dev \
+    libopenblas-base \
+    libopenblas-dev && \
+    apt-get autoremove -y && \
+    apt-get clean -y
+
+RUN cd /root && git clone -b v0.2.18 https://github.com/xianyi/OpenBLAS.git && \
+    cd OpenBLAS && \
+    make DYNAMIC_ARCH=1 NO_AFFINITY=1 NUM_THREADS=16 USE_OPENMP=1 && \
+    make install && \
+    echo "/opt/OpenBLAS/lib" > /etc/ld.so.conf.d/openblas.conf && \
+    ldconfig
+
 RUN pip install \
     biopython \
     h5py \
