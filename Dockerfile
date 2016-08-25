@@ -43,7 +43,7 @@ RUN apt-get purge -y \
 RUN cd /root && git clone -b v0.2.18 https://github.com/xianyi/OpenBLAS.git && \
     cd OpenBLAS && \
     make DYNAMIC_ARCH=1 NO_AFFINITY=1 NUM_THREADS=16 USE_OPENMP=1 && \
-    make install && \
+    make install DYNAMIC_ARCH=1 NO_AFFINITY=1 NUM_THREADS=16 USE_OPENMP=1 && \
     echo "/opt/OpenBLAS/lib" > /etc/ld.so.conf.d/openblas.conf && \
     ldconfig
 
