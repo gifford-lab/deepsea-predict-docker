@@ -42,4 +42,6 @@ RUN /root/torch/install/bin/luarocks install hdf5
 # Bring DeepSEA source code into the image.
 RUN wget -q http://deepsea.princeton.edu/media/code/deepsea.v0.94.tar.gz && tar -zxvf deepsea.v0.94.tar.gz -C /root/ > /dev/null
 
+COPY rebuild_torch/rebuild_torch.sh /root/torch/
+
 WORKDIR /root/DeepSEA-v0.94/
